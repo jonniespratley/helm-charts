@@ -1,12 +1,13 @@
 # Helm charts
-
-[As a blogger](https://akomljen.com) and DevOps consultant I work with Helm and Kubernetes, in general, a lot.
 This is my collection of Helm charts that I'm using to do some daily work, or just for research.
 
 To start, add the repo first:
+
+```sh
+$ helm repo add jps-charts https://raw.githubusercontent.com/jonniespratley/helm-charts/master/charts/
 ```
-helm repo add akomljen-charts https://raw.githubusercontent.com/komljen/helm-charts/master/charts/
-```
+
+
 
 ## Official Charts Repository
 
