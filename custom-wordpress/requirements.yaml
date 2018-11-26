@@ -1,0 +1,5 @@
+dependencies:
+  - name: wordpress
+    alias: wordpress-1
+    #version: stable
+    repository: @stable

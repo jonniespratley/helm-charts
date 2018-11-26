@@ -1,0 +1,12 @@
+favorite:
+  drink: beer
+  food: pizza
+
+pizzaToppings:
+  - bacon
+  - cheese
+  - peppers
+
+
+global:
+  salad: caesar

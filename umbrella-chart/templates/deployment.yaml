@@ -1,0 +1,115 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ include "umbrella-chart.fullname" . }}
+  labels:
+    app: {{ include "umbrella-chart.name" . }}
+    helm.sh/chart: {{ include "umbrella-chart.chart" . }}
+    release: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "umbrella-chart.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "umbrella-chart.fullname" . }}
+        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        release: "{{ .Release.Name }}"
+        
+    spec:
+      {{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+      {{- range .Values.image.pullSecrets }}
+        - name: {{ . }}
+      {{- end}}
+      {{- end }}
+      hostAliases:
+      - ip: "127.0.0.1"
+        hostnames:
+        - "status.localhost"
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: WORDPRESS_DATABASE_NAME
+            {{- if .Values.mariadb.enabled }}
+              value: {{ .Values.mariadb.db.name | quote }}
+            {{- else }}
+              value: {{ .Values.externalDatabase.database | quote }}
+            {{- end }}
+            - name: WORDPRESS_DATABASE_USER
+            {{- if .Values.mariadb.enabled }}
+              value: {{ .Values.mariadb.db.user | quote }}
+            {{- else }}
+              value: {{ .Values.externalDatabase.user | quote }}
+            {{- end }}
+            - name: WORDPRESS_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                {{- if .Values.mariadb.enabled }}
+                  name: {{ template "mariadb.fullname" . }}
+                  key: mariadb-password
+                {{- else }}
+                  name: {{ printf "%s-%s" .Release.Name "externaldb" }}
+                  key: db-password
+                {{- end }}
+            - name: WORDPRESS_USERNAME
+              value: {{ .Values.wordpressUsername | quote }}
+            - name: WORDPRESS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "umbrella-chart.fullname" . }}
+                  key: wordpress-password
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: https
+              containerPort: 443
+          livenessProbe:
+            httpGet:
+              path: /
+              {{- if not .Values.healthcheckHttps }}
+              port: http
+            {{- else }}
+              port: https
+              scheme: HTTPS
+            {{- end }}
+{{ toYaml .Values.livenessProbe | indent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /
+            {{- if not .Values.healthcheckHttps }}
+              port: http
+            {{- else }}
+              port: https
+              scheme: HTTPS
+            {{- end }}
+  {{ toYaml .Values.readinessProbe | indent 12 }}   
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      volumes:
+        - name: wordpress-data
+        {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (include "umbrella-chart.fullname" .) }}
+        {{- else }}
+          emptyDir: {}
+        {{ end }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
