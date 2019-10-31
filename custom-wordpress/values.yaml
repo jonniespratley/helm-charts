@@ -1,5 +1,0 @@
-replicaCount: 1
-wordpress:
-  wordpressUsername: admin
-  wordpressPassword: admin
-
